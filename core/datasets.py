@@ -10,13 +10,14 @@ import math
 import random
 from glob import glob
 import os.path as osp
+from pathlib import Path
 
 from utils import frame_utils
 from utils.augmentor import FlowAugmentor, SparseFlowAugmentor
 
 
 class SeismicDataset(data.Dataset):
-    def __init__(self, root: str = '/content/PP_PS_data/small', split: str  = "Train"):
+    def __init__(self, root: str, split: str  = "Train"):
         self.init_seed = False
         self.flow_list = []
         self.image_list = []
