@@ -11,7 +11,7 @@ cv2.ocl.setUseOpenCL(False)
 TAG_CHAR = np.array([202021.25], np.float32)
 
 def readSeismicCSV(file_path, is_flow = False):
-    data = pd.read_csv(file_path, header=None).to_numpy()
+    data = pd.read_csv(file_path, header=None).to_numpy(dtype=np.float32)
     if is_flow:
         data = data / 0.002
     

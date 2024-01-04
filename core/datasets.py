@@ -15,6 +15,61 @@ from utils import frame_utils
 from utils.augmentor import FlowAugmentor, SparseFlowAugmentor
 
 
+class SeismicDataset(data.Dataset):
+    def __init__(self, root: str = '/content/PP_PS_data/small', split: str  = "Train"):
+        self.init_seed = False
+        self.flow_list = []
+        self.image_list = []
+
+        root = Path(root)
+        PP_root   = root / 'PP_data'
+        PS_root   = root / 'PS_train_txt' / f'{split}_data'
+        flow_root = root / 'label_txt'    / f'{split}_data'
+
+        for PS_file in list(PS_root.glob('**/*.csv')):
+            PP_file_name = PS_file.name.split('_')[1]
+            PP_file = PP_root/PP_file_name
+            flow_file = list(flow_root.glob(f'**/{PS_file.name}'))[0]
+
+            self.image_list += [ [PP_file, PS_file] ]
+            self.flow_list += [flow_file]
+
+    def __getitem__(self, index):
+
+        if not self.init_seed:
+            worker_info = torch.utils.data.get_worker_info()
+            if worker_info is not None:
+                torch.manual_seed(worker_info.id)
+                np.random.seed(worker_info.id)
+                random.seed(worker_info.id)
+                self.init_seed = True
+
+        index = index % len(self.image_list)
+
+        flow = frame_utils.readSeismicCSV(self.flow_list[index], is_flow = True)
+
+        pp_data = frame_utils.readSeismicCSV(self.image_list[index][0])
+        ps_data = frame_utils.readSeismicCSV(self.image_list[index][1])
+
+        pp_data = torch.from_numpy(pp_data).permute(2, 0, 1).float()
+        ps_data = torch.from_numpy(ps_data).permute(2, 0, 1).float()
+        flow = torch.from_numpy(flow).permute(2, 0, 1).float()
+
+
+        valid = (flow[0].abs() < 1000).float()
+
+        return pp_data, ps_data, flow, valid
+
+
+    def __rmul__(self, v):
+        self.flow_list = v * self.flow_list
+        self.image_list = v * self.image_list
+        return self
+        
+    def __len__(self):
+        return len(self.image_list)
+        
+
 class FlowDataset(data.Dataset):
     def __init__(self, aug_params=None, sparse=False):
         self.augmentor = None
@@ -97,7 +152,6 @@ class FlowDataset(data.Dataset):
         
     def __len__(self):
         return len(self.image_list)
-        
 
 class MpiSintel(FlowDataset):
     def __init__(self, aug_params=None, split='training', root='datasets/Sintel', dstype='clean'):
