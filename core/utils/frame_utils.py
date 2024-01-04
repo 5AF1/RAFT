@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from PIL import Image
 from os.path import *
 import re
@@ -8,6 +9,13 @@ cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 
 TAG_CHAR = np.array([202021.25], np.float32)
+
+def readSeismicCSV(file_path, is_flow = False):
+    data = pd.read_csv(csv_path, header=None).to_numpy()
+    if is_flow:
+        data = data / 0.002
+    
+    return np.resize(data, (data.shape[0], data.shape[1], 1))
 
 def readFlow(fn):
     """ Read .flo file in Middlebury format"""
