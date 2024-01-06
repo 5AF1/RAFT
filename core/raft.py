@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from update import BasicUpdateBlock, SmallUpdateBlock
+from update import BasicUpdateBlock, SmallUpdateBlock, SeismicBasicUpdateBlock, SeismicSmallUpdateBlock
 from extractor import BasicEncoder, SmallEncoder, SeismicBasicEncoder, SeismicSmallEncoder
 from corr import CorrBlock, AlternateCorrBlock
 from utils.utils import bilinear_sampler, coords_grid, upflow8
