@@ -23,7 +23,7 @@ except:
 
 class SeismicRAFT(nn.Module):
     def __init__(self, args):
-        super(RAFT, self).__init__()
+        super(SeismicRAFT, self).__init__()
         self.args = args
 
         if args.small:
