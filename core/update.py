@@ -17,7 +17,7 @@ class SeismicFlowHead(nn.Module):
     def __init__(self, input_dim=128, hidden_dim=256):
         super(SeismicFlowHead, self).__init__()
         self.conv1 = nn.Conv2d(input_dim, hidden_dim, 3, padding=1)
-        self.conv2 = nn.Conv2d(hidden_dim, 1, 3, padding=1)
+        self.conv2 = nn.Conv2d(hidden_dim, 2, 3, padding=1)
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
