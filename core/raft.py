@@ -63,8 +63,9 @@ class SeismicRAFT(nn.Module):
     def initialize_flow(self, img):
         """ Flow is represented as difference between two coordinate grids flow = coords1 - coords0"""
         N, C, H, W = img.shape
-        coords0 = coords_grid(N, H//8, W//8, device=img.device)
-        coords1 = coords_grid(N, H//8, W//8, device=img.device)
+        H, W = np.ceil(H/8).astype(np.int64), np.ceil(W/8).astype(np.int64)
+        coords0 = coords_grid(N, H, W, device=img.device)
+        coords1 = coords_grid(N, H, W, device=img.device)
 
         # optical flow computed as difference: flow = coords1 - coords0
         return coords0, coords1
