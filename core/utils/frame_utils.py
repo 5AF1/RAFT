@@ -15,7 +15,16 @@ def readSeismicCSV(file_path, is_flow = False):
     if is_flow:
         data = data / 0.002
     
-    return np.resize(data, (data.shape[0], data.shape[1], 1))
+    # height and width must be a multiple of 8 so croping to nearest multiples
+    # Taking the top portion in terms of height from 0 to h-1 via :h
+    h = data.shape[0]//8*8
+    # Taking the center portion in terms of width from w_0 to w_0+w-1 via w_0:w_0+w
+    w = data.shape[1]//8*8
+    w_0 = (data.shape[1] - w)//2
+
+    data = data[:h,w_0:w_0+w]
+    
+    return np.resize(data, (h, w, 1))
 
 def readFlow(fn):
     """ Read .flo file in Middlebury format"""
