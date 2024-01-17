@@ -113,7 +113,7 @@ class SeismicSmallMotionEncoder(nn.Module):
         self.convc1 = nn.Conv2d(cor_planes, 96, 1, padding=0)
         self.convf1 = nn.Conv2d(1, 64, 7, padding=3)
         self.convf2 = nn.Conv2d(64, 32, 3, padding=1)
-        self.conv = nn.Conv2d(128, 80, 3, padding=1)
+        self.conv = nn.Conv2d(128, 80+1, 3, padding=1)
 
     def forward(self, flow, corr):
         cor = F.relu(self.convc1(corr))
@@ -131,7 +131,7 @@ class SeismicBasicMotionEncoder(nn.Module):
         self.convc2 = nn.Conv2d(256, 192, 3, padding=1)
         self.convf1 = nn.Conv2d(1, 128, 7, padding=3)
         self.convf2 = nn.Conv2d(128, 64, 3, padding=1)
-        self.conv = nn.Conv2d(64+192, 128-2, 3, padding=1)
+        self.conv = nn.Conv2d(64+192, 128-1, 3, padding=1)
 
     def forward(self, flow, corr):
         cor = F.relu(self.convc1(corr))
