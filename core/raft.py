@@ -71,17 +71,17 @@ class SeismicRAFT(nn.Module):
         return coords0, coords1
 
     def upsample_flow(self, flow, mask):
-        """ Upsample flow field [H/8, W/8, 2] -> [H, W, 2] using convex combination """
+        """ Upsample flow field [H/8, W/8, 1] -> [H, W, 1] using convex combination """
         N, _, H, W = flow.shape
         mask = mask.view(N, 1, 9, 8, 8, H, W)
         mask = torch.softmax(mask, dim=2)
 
         up_flow = F.unfold(8 * flow, [3,3], padding=1)
-        up_flow = up_flow.view(N, 2, 9, 1, 1, H, W)
+        up_flow = up_flow.view(N, 1, 9, 1, 1, H, W)
 
         up_flow = torch.sum(mask * up_flow, dim=2)
         up_flow = up_flow.permute(0, 1, 4, 2, 5, 3)
-        return up_flow.reshape(N, 2, 8*H, 8*W)
+        return up_flow.reshape(N, 1, 8*H, 8*W)
 
 
     def forward(self, image1, image2, iters=12, flow_init=None, upsample=True, test_mode=False):
@@ -125,22 +125,26 @@ class SeismicRAFT(nn.Module):
             corr = corr_fn(coords1) # index correlation volume
 
             flow = coords1 - coords0
+            flow = flow[:,1:,:,:]
             with autocast(enabled=self.args.mixed_precision):
                 net, up_mask, delta_flow = self.update_block(net, inp, corr, flow)
 
             # F(t+1) = F(t) + \Delta(t)
-            coords1 = coords1 + delta_flow
+            # coords1 = coords1 + delta_flow
+            coords1[:,1:,:,:] = coords1[:,1:,:,:] + delta_flow
 
+            flow_up = coords1 - coords0
+            flow_up = flow_up[:,1:,:,:]
             # upsample predictions
             if up_mask is None:
-                flow_up = upflow8(coords1 - coords0)
+                flow_up = upflow8(flow_up)
             else:
-                flow_up = self.upsample_flow(coords1 - coords0, up_mask)
+                flow_up = self.upsample_flow(flow_up, up_mask)
             
             flow_predictions.append(flow_up)
 
         if test_mode:
-            return coords1 - coords0, flow_up
+            return (coords1 - coords0)[:,1:,:,:], flow_up
             
         return flow_predictions
 
