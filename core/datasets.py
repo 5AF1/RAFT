@@ -17,7 +17,7 @@ from utils.augmentor import FlowAugmentor, SparseFlowAugmentor
 
 
 class SeismicDataset(data.Dataset):
-    def __init__(self, root: str, split: str  = "Train"):
+    def __init__(self, root: str, split: str = "Train"):
         self.init_seed = False
         self.flow_list = []
         self.image_list = []
@@ -249,6 +249,17 @@ class HD1K(FlowDataset):
                 self.image_list += [ [images[i], images[i+1]] ]
 
             seq_ix += 1
+
+
+def fetch_seismic_dataloader(args, split: str = "Train"):
+    # Create Dataset for corresponding split
+    ds = SeismicDataset(root = args.root, split = split)
+    dl = data.DataLoader(se_train_dataset, batch_size=args.batch_size, 
+                        pin_memory=False, shuffle=True, num_workers=4, drop_last=True)
+    print(f'Dataset with {len(ds)} image pairs')
+    return dl
+
+
 
 
 def fetch_dataloader(args, TRAIN_DS='C+T+K+S+H'):
