@@ -72,6 +72,50 @@ def create_kitti_submission(model, iters=24, output_path='kitti_submission'):
 
 
 @torch.no_grad()
+def validate_seismic(model, root, iters=24):
+    """ Perform evaluation on the Seismic (valid) split """
+    model.eval()
+    val_dataset = datasets.SeismicDataset(root = root,split='Validation')
+    epe_list = []
+    Kepe_list = []
+    Kout_list = []
+
+
+    for val_id in range(len(val_dataset)):
+        image1, image2, flow_gt, valid_gt = val_dataset[val_id]
+        image1 = image1[None].cuda()
+        image2 = image2[None].cuda()
+
+        flow_low, flow_pr = model(image1, image2, iters=iters, test_mode=True)
+        epe = torch.sum((flow_pr[0].cpu() - flow_gt)**2, dim=0).sqrt()
+        epe_list.append(epe.view(-1).numpy())
+
+        mag = torch.sum(flow_gt**2, dim=0).sqrt()
+
+        epe = epe.view(-1)
+        mag = mag.view(-1)
+        val = valid_gt.view(-1) >= 0.5
+
+        out = ((epe > 3.0) & ((epe/mag) > 0.05)).float()
+        Kepe_list.append(epe[val].mean().item())
+        Kout_list.append(out[val].cpu().numpy())
+
+    # epe = np.mean(np.concatenate(epe_list))
+    epe_all = np.concatenate(epe_list)
+    epe = np.mean(epe_all)
+    px1 = np.mean(epe_all<1)
+    px3 = np.mean(epe_all<3)
+    px5 = np.mean(epe_all<5)
+
+    Kepe_list = np.array(Kepe_list)
+    Kout_list = np.concatenate(Kout_list)
+
+    Kepe = np.mean(Kepe_list)
+    f1 = 100 * np.mean(Kout_list)
+
+    return {'kitti-epe': Kepe, 'kitti-f1': f1, 'epe':epe, 'px1':px1, 'px3':px3, 'px5':px5}
+
+@torch.no_grad()
 def validate_chairs(model, iters=24):
     """ Perform evaluation on the FlyingChairs (test) split """
     model.eval()
