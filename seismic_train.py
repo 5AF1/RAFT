@@ -152,7 +152,7 @@ def train(args):
 
     total_steps = 0
     scaler = GradScaler(enabled=args.mixed_precision)
-    logger = Logger(model, scheduler)
+    logger = Logger(model, scheduler, args)
 
     should_keep_training = True
     while should_keep_training:
