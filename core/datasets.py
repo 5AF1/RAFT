@@ -255,7 +255,9 @@ def fetch_seismic_dataloader(args, split: str = "Train"):
     # Create Dataset for corresponding split
     ds = SeismicDataset(root = args.root, split = split)
     dl = data.DataLoader(ds, batch_size=args.batch_size, 
-                        pin_memory=False, shuffle=True, num_workers=4, drop_last=True)
+                        pin_memory=args.pin_memory, shuffle=args.shuffle, 
+                        num_workers=args.num_workers, drop_last=args.drop_last)
+                        # pin_memory=False, shuffle=True, num_workers=4, drop_last=True)
     print(f'Dataset with {len(ds)} image pairs')
     return dl
 

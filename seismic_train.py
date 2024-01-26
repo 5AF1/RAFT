@@ -95,14 +95,14 @@ class Logger:
 
     def _print_training_status(self):
         metrics_data = [(k,self.running_loss[k]/self.args.log_every) for k in sorted(self.running_loss.keys())]
-        training_str = f"\n[Steps {(self.total_steps+1):6d}, last lr{(self.scheduler.get_last_lr()[0]):10.7f}] "
+        training_str = f"\n{{'Steps': {(self.total_steps+1):6d}, 'last lr': {(self.scheduler.get_last_lr()[0]):10.7f}"
         # metrics_str = ("{:10.4f}, "*len(metrics_data)).format(*metrics_data)
         metrics_str = ''
         for k,data in metrics_data:
-            metrics_str += f'{k} = {(data):10.4f} | '
+            metrics_str += f"'{k}': {(data):7.5f}, "
         
         # print the training status
-        print(training_str + metrics_str)
+        print(training_str + metrics_str + '}')
         print('='*len(training_str + metrics_str))
 
         if self.writer is None:
