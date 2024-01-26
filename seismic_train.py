@@ -178,7 +178,7 @@ def train(args):
 
             logger.push(metrics)
 
-            if total_steps % self.args.validation_every == self.args.validation_every - 1:
+            if total_steps % args.validation_every == args.validation_every - 1:
                 PATH = Path(args.checkpoint)
                 PATH.mkdir(exist_ok=True)
                 PATH = PATH/f'{total_steps+1}_{args.name}.pth'
