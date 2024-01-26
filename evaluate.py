@@ -113,7 +113,7 @@ def validate_seismic(model, root, iters=24):
     Kepe = np.mean(Kepe_list)
     f1 = 100 * np.mean(Kout_list)
 
-    return {'kitti-epe': Kepe, 'kitti-f1': f1, 'epe':epe, 'px1':px1, 'px3':px3, 'px5':px5}
+    return {'val_kitti-epe': Kepe, 'val_kitti-f1': f1, 'val_epe':epe, 'val_px1':px1, 'val_px3':px3, 'val_px5':px5}
 
 @torch.no_grad()
 def validate_chairs(model, iters=24):

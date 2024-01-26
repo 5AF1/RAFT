@@ -19,6 +19,8 @@ import torch.optim as optim
 
 from torch.utils.tensorboard import SummaryWriter
 
+import wandb
+
 try:
     from torch.cuda.amp import GradScaler
 except:
@@ -65,6 +67,7 @@ def sequence_loss(flow_preds, flow_gt, valid, gamma=0.8, max_flow=400):
         '1px': (epe < 1).float().mean().item(),
         '3px': (epe < 3).float().mean().item(),
         '5px': (epe < 5).float().mean().item(),
+        'loss':flow_loss.item(),
     }
 
     return flow_loss, metrics
@@ -136,6 +139,81 @@ class Logger:
     def close(self):
         self.writer.close()
 
+def wandb_train(args):
+    wandb.login()
+
+    with wandb.init(project=f"wandb_{args.name}", config=args):
+        args = wandb.config
+        
+        torch.manual_seed(args.seed)
+        np.random.seed(args.seed)
+        
+        Path(args.checkpoint).mkdir(exist_ok=True)
+
+        model = nn.DataParallel(RAFT(args), device_ids=args.gpus)
+        print(f"Parameter Count: {count_parameters(model)}")
+
+        if args.restore_ckpt is not None:
+            model.load_state_dict(torch.load(args.restore_ckpt), strict=False)
+
+        model.cuda()
+        model.train()
+
+        train_loader = datasets.fetch_seismic_dataloader(args, split = 'Train')
+        train_loader_len = len(train_loader)
+        optimizer, scheduler = fetch_optimizer(args, model)
+
+        wandb.watch(model, log="all", log_freq=10)
+
+        total_steps = 0
+        scaler = GradScaler(enabled=args.mixed_precision)
+        # logger = Logger(model, scheduler, args)
+
+        should_keep_training = True
+        while should_keep_training:
+            epoch = 0
+            for i_batch, data_blob in enumerate(tqdm(train_loader, desc = f'Epoch {epoch} Step {total_steps+1} of {args.num_steps}', total = train_loader_len)):
+                optimizer.zero_grad()
+                image1, image2, flow, valid = [x.cuda() for x in data_blob]
+
+                if args.add_noise:
+                    stdv = np.random.uniform(0.0, 5.0)
+                    image1 = (image1 + stdv * torch.randn(*image1.shape).cuda()).clamp(0.0, 255.0)
+                    image2 = (image2 + stdv * torch.randn(*image2.shape).cuda()).clamp(0.0, 255.0)
+
+                flow_predictions = model(image1, image2, iters=args.iters)            
+
+                loss, metrics = sequence_loss(flow_predictions, flow, valid, args.gamma, max_flow=args.max_flow)
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)                
+                torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+                
+                scaler.step(optimizer)
+                scheduler.step()
+                scaler.update()
+
+                wandb.log(metrics, step=total_steps)
+
+                if total_steps % args.validation_every == args.validation_every - 1:
+                    PATH = Path(args.checkpoint)
+                    PATH.mkdir(exist_ok=True)
+                    PATH = PATH/f'{total_steps+1}_{args.name}.pth'
+                    torch.save(model.state_dict(), PATH)
+
+                    results = {}
+                    
+                    results.update(evaluate.validate_seismic(model.module,  args.root))
+
+                    wandb.log(results, step=total_steps)
+                    
+                    model.train()
+            
+                total_steps += 1
+                epoch += 1
+
+                if total_steps > args.num_steps:
+                    should_keep_training = False
+                    break
 
 def train(args):
     torch.manual_seed(args.seed)
@@ -162,6 +240,7 @@ def train(args):
 
     should_keep_training = True
     while should_keep_training:
+        epoch = 0
         for i_batch, data_blob in enumerate(tqdm(train_loader, desc = f'Step {total_steps+1} of {args.num_steps}', total = train_loader_len)):
             optimizer.zero_grad()
             image1, image2, flow, valid = [x.cuda() for x in data_blob]
@@ -199,6 +278,7 @@ def train(args):
                 model.train()
             
             total_steps += 1
+            epoch += 1
 
             if total_steps > args.num_steps:
                 should_keep_training = False
