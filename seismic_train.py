@@ -156,7 +156,7 @@ def train(args):
 
     should_keep_training = True
     while should_keep_training:
-        for i_batch, data_blob in tqdm(enumerate(train_loader), desc = f'Step {total_steps+1} of {args.num_steps}'):
+        for i_batch, data_blob in enumerate(tqdm(train_loader, desc = f'Step {total_steps+1} of {args.num_steps}')):
             optimizer.zero_grad()
             image1, image2, flow, valid = [x.cuda() for x in data_blob]
 
