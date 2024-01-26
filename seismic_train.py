@@ -243,6 +243,8 @@ def get_default_args():
         drop_last = True,
     )
 
+    return args
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', default='raft', help="name your experiment")
