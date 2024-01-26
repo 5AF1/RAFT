@@ -138,6 +138,10 @@ class Logger:
 
 
 def train(args):
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    
+    Path(args.checkpoint).mkdir(exist_ok=True)
 
     model = nn.DataParallel(RAFT(args), device_ids=args.gpus)
     print(f"Parameter Count: {count_parameters(model)}")
@@ -208,6 +212,37 @@ def train(args):
 
     return PATH
 
+def get_default_args():
+    args = Namespace(
+        name = 'seismic-raft',
+        root = '/Dataset',
+        checkpoint = './checkpoints/',
+        restore_ckpt = None,
+        small=False,
+
+        lr=0.000125, num_steps=100000,
+        batch_size=2,
+        gpus=[0],
+        mixed_precision=False,
+
+        iters=12,
+        wdecay=1e-05,epsilon=1e-08, 
+        clip=1.0,
+        dropout=0.0,
+        gamma=0.85,
+        add_noise=False,
+        
+        seed = 1234,
+        log_every = 100,
+        validation_every = 1000,
+        max_flow = 400,
+
+        num_workers = 2,
+        pin_memory = False,
+        shuffle = True,
+        drop_last = True,
+    )
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', default='raft', help="name your experiment")
@@ -251,10 +286,5 @@ if __name__ == '__main__':
 
     args_dict = vars(args)
     pprint(args_dict)
-
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    
-    Path(args.checkpoint).mkdir(exist_ok=True)
 
     train(args)
