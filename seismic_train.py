@@ -236,6 +236,11 @@ def get_args():
     parser.add_argument('--log_every', type=int, default=100)
     parser.add_argument('--validation_every', type=int, default=1000)
     parser.add_argument('--max_flow', type=int, default=400)
+
+    parser.add_argument('--num_workers', type=int, default=2)
+    parser.add_argument('--pin_memory', action='store_true')
+    parser.add_argument('--shuffle', action='store_true')
+    parser.add_argument('--drop_last', action='store_true')
     args = parser.parse_args()
 
     return args
