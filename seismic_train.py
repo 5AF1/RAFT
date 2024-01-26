@@ -1,19 +1,22 @@
 import sys
 sys.path.append('core')
 
+from argparse import Namespace
 import argparse
+
+import datasets
+import evaluate
+from raft import SeismicRAFT as RAFT
+
+from pathlib import Path
+from tqdm import tqdm
 import numpy as np
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from torch.utils.data import DataLoader
-from raft import SeismicRAFT as RAFT
-import evaluate
-import datasets
-
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 try:
     from torch.cuda.amp import GradScaler
@@ -38,7 +41,7 @@ SUM_FREQ = 100
 VAL_FREQ = 5000
 
 
-def sequence_loss(flow_preds, flow_gt, valid, gamma=0.8, max_flow=MAX_FLOW):
+def sequence_loss(flow_preds, flow_gt, valid, gamma=0.8, max_flow=400):
     """ Loss function defined over sequence of flow predictions """
 
     n_predictions = len(flow_preds)    
@@ -81,26 +84,32 @@ def fetch_optimizer(args, model):
     
 
 class Logger:
-    def __init__(self, model, scheduler):
+    def __init__(self, model, scheduler, args):
         self.model = model
         self.scheduler = scheduler
         self.total_steps = 0
         self.running_loss = {}
         self.writer = None
 
+        self.args = args
+
     def _print_training_status(self):
-        metrics_data = [self.running_loss[k]/SUM_FREQ for k in sorted(self.running_loss.keys())]
-        training_str = "[{:6d}, {:10.7f}] ".format(self.total_steps+1, self.scheduler.get_last_lr()[0])
-        metrics_str = ("{:10.4f}, "*len(metrics_data)).format(*metrics_data)
+        metrics_data = [(k,self.running_loss[k]/self.args.log_every) for k in sorted(self.running_loss.keys())]
+        training_str = f"[Steps {(self.total_steps+1):6d}, last lr{(self.scheduler.get_last_lr()[0]):10.7f}] "
+        # metrics_str = ("{:10.4f}, "*len(metrics_data)).format(*metrics_data)
+        metrics_str = ''
+        for k,data in metrics_data:
+            metrics_str += f'{k} = {(data):10.4f} | '
         
         # print the training status
         print(training_str + metrics_str)
+        print('='*len(training_str + metrics_str))
 
         if self.writer is None:
             self.writer = SummaryWriter()
 
         for k in self.running_loss:
-            self.writer.add_scalar(k, self.running_loss[k]/SUM_FREQ, self.total_steps)
+            self.writer.add_scalar(k, self.running_loss[k]/self.args.log_every, self.total_steps)
             self.running_loss[k] = 0.0
 
     def push(self, metrics):
@@ -112,7 +121,7 @@ class Logger:
 
             self.running_loss[key] += metrics[key]
 
-        if self.total_steps % SUM_FREQ == SUM_FREQ-1:
+        if self.total_steps % self.args.log_every == self.args.log_every-1:
             self._print_training_status()
             self.running_loss = {}
 
@@ -138,23 +147,16 @@ def train(args):
     model.cuda()
     model.train()
 
-    if args.stage != 'chairs':
-        model.module.freeze_bn()
-
-    train_loader = datasets.fetch_dataloader(args)
+    train_loader = datasets.fetch_seismic_dataloader(args, split = 'Train')
     optimizer, scheduler = fetch_optimizer(args, model)
 
     total_steps = 0
     scaler = GradScaler(enabled=args.mixed_precision)
     logger = Logger(model, scheduler)
 
-    VAL_FREQ = 5000
-    add_noise = True
-
     should_keep_training = True
     while should_keep_training:
-
-        for i_batch, data_blob in enumerate(train_loader):
+        for i_batch, data_blob in tqdm(enumerate(train_loader), desc = f'Step {total_steps+1} of {args.num_steps}'):
             optimizer.zero_grad()
             image1, image2, flow, valid = [x.cuda() for x in data_blob]
 
@@ -165,7 +167,7 @@ def train(args):
 
             flow_predictions = model(image1, image2, iters=args.iters)            
 
-            loss, metrics = sequence_loss(flow_predictions, flow, valid, args.gamma)
+            loss, metrics = sequence_loss(flow_predictions, flow, valid, args.gamma, max_flow=args.max_flow)
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)                
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
@@ -176,24 +178,19 @@ def train(args):
 
             logger.push(metrics)
 
-            if total_steps % VAL_FREQ == VAL_FREQ - 1:
-                PATH = 'checkpoints/%d_%s.pth' % (total_steps+1, args.name)
+            if total_steps % self.args.validation_every == self.args.validation_every - 1:
+                PATH = Path(args.checkpoint)
+                PATH.mkdir(exist_ok=True)
+                PATH = PATH/f'{total_steps+1}_{args.name}.pth'
                 torch.save(model.state_dict(), PATH)
 
                 results = {}
-                for val_dataset in args.validation:
-                    if val_dataset == 'chairs':
-                        results.update(evaluate.validate_chairs(model.module))
-                    elif val_dataset == 'sintel':
-                        results.update(evaluate.validate_sintel(model.module))
-                    elif val_dataset == 'kitti':
-                        results.update(evaluate.validate_kitti(model.module))
+                
+                results.update(evaluate.validate_seismic(model.module,  args.root))
 
                 logger.write_dict(results)
                 
                 model.train()
-                if args.stage != 'chairs':
-                    model.module.freeze_bn()
             
             total_steps += 1
 
@@ -202,7 +199,9 @@ def train(args):
                 break
 
     logger.close()
-    PATH = 'checkpoints/%s.pth' % args.name
+    PATH = Path(args.checkpoint)
+    PATH.mkdir(exist_ok=True)
+    PATH = PATH/f'{args.name}.pth'
     torch.save(model.state_dict(), PATH)
 
     return PATH
@@ -231,6 +230,11 @@ def get_args():
     parser.add_argument('--dropout', type=float, default=0.0)
     parser.add_argument('--gamma', type=float, default=0.8, help='exponential weighting')
     parser.add_argument('--add_noise', action='store_true')
+
+    parser.add_argument('--seed', type=int, default=1234)
+    parser.add_argument('--log_every', type=int, default=100)
+    parser.add_argument('--validation_every', type=int, default=1000)
+    parser.add_argument('--max_flow', type=int, default=400)
     args = parser.parse_args()
 
     return args
@@ -238,10 +242,9 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
 
-    torch.manual_seed(1234)
-    np.random.seed(1234)
-
-    if not os.path.isdir('checkpoints'):
-        os.mkdir('checkpoints')
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    
+    Path(args.checkpoint).mkdir(exist_ok=True)
 
     train(args)
