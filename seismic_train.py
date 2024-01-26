@@ -11,6 +11,7 @@ from raft import SeismicRAFT as RAFT
 from pathlib import Path
 from tqdm import tqdm
 import numpy as np
+from pprint import pprint
 
 import torch
 import torch.nn as nn
@@ -247,6 +248,9 @@ def get_args():
 
 if __name__ == '__main__':
     args = get_args()
+
+    args_dict = vars(args)
+    pprint(args_dict)
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
