@@ -95,7 +95,7 @@ class Logger:
 
     def _print_training_status(self):
         metrics_data = [(k,self.running_loss[k]/self.args.log_every) for k in sorted(self.running_loss.keys())]
-        training_str = f"[Steps {(self.total_steps+1):6d}, last lr{(self.scheduler.get_last_lr()[0]):10.7f}] "
+        training_str = f"\n[Steps {(self.total_steps+1):6d}, last lr{(self.scheduler.get_last_lr()[0]):10.7f}] "
         # metrics_str = ("{:10.4f}, "*len(metrics_data)).format(*metrics_data)
         metrics_str = ''
         for k,data in metrics_data:
@@ -139,7 +139,7 @@ class Logger:
 def train(args):
 
     model = nn.DataParallel(RAFT(args), device_ids=args.gpus)
-    print("Parameter Count: %d" % count_parameters(model))
+    print(f"Parameter Count: {count_parameters(model)}")
 
     if args.restore_ckpt is not None:
         model.load_state_dict(torch.load(args.restore_ckpt), strict=False)
@@ -148,6 +148,7 @@ def train(args):
     model.train()
 
     train_loader = datasets.fetch_seismic_dataloader(args, split = 'Train')
+    train_loader_len = len(train_loader)
     optimizer, scheduler = fetch_optimizer(args, model)
 
     total_steps = 0
@@ -156,7 +157,7 @@ def train(args):
 
     should_keep_training = True
     while should_keep_training:
-        for i_batch, data_blob in enumerate(tqdm(train_loader, desc = f'Step {total_steps+1} of {args.num_steps}')):
+        for i_batch, data_blob in enumerate(tqdm(train_loader, desc = f'Step {total_steps+1} of {args.num_steps}', total = train_loader_len)):
             optimizer.zero_grad()
             image1, image2, flow, valid = [x.cuda() for x in data_blob]
 
