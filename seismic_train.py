@@ -193,6 +193,7 @@ def wandb_train(args):
                 scaler.update()
 
                 wandb.log(metrics, step=total_steps)
+                wandb.log({'last lr': (scheduler.get_last_lr()[0])}, step = total_steps)
 
                 if total_steps % args.validation_every == args.validation_every - 1:
                     PATH = Path(args.checkpoint)
