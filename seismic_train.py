@@ -11,6 +11,7 @@ from raft import SeismicRAFT as RAFT
 from pathlib import Path
 from tqdm import tqdm
 import numpy as np
+import random
 from pprint import pprint
 
 import torch
@@ -147,6 +148,12 @@ def wandb_train(args):
         
         torch.manual_seed(args.seed)
         np.random.seed(args.seed)
+
+        torch.backends.cudnn.deterministic = True
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
         
         Path(args.checkpoint).mkdir(exist_ok=True)
 
