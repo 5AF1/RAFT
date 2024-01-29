@@ -72,10 +72,10 @@ def create_kitti_submission(model, iters=24, output_path='kitti_submission'):
 
 
 @torch.no_grad()
-def validate_seismic(model, root, iters=24):
+def validate_seismic(model, root, equalize = False, iters=24):
     """ Perform evaluation on the Seismic (valid) split """
     model.eval()
-    val_dataset = datasets.SeismicDataset(root = root,split='Validation')
+    val_dataset = datasets.SeismicDataset(root = root, split='Validation', equalize=equalize)
     epe_list = []
     Kepe_list = []
     Kout_list = []

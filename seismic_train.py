@@ -256,10 +256,10 @@ def train(args):
     total_steps = 0
     scaler = GradScaler(enabled=args.mixed_precision)
     logger = Logger(model, scheduler, args)
+    epoch = 0
 
     should_keep_training = True
     while should_keep_training:
-        epoch = 0
         for i_batch, data_blob in enumerate(tqdm(train_loader, desc = f'Step {total_steps+1} of {args.num_steps}', total = train_loader_len)):
             optimizer.zero_grad()
             image1, image2, flow, valid = [x.cuda() for x in data_blob]
@@ -290,7 +290,7 @@ def train(args):
 
                 results = {}
                 
-                results.update(evaluate.validate_seismic(model.module,  args.root))
+                results.update(evaluate.validate_seismic(model.module,  args.root, equalize=args.equalize))
 
                 logger.write_dict(results)
                 
@@ -402,7 +402,7 @@ def get_args(args = None):
         args.wandb_run_id = wandb.util.generate_id()
 
     if args.name is None:
-        args.name = f'{args.wandb_project}_{args.wandb_run_id if args.wandb_run_id is not None else datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_{args.wandb_run_id}'
+        args.name = f'{args.wandb_project}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_{args.wandb_run_id}'
     
     return args
 
