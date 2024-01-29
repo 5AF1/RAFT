@@ -316,6 +316,7 @@ def get_default_args():
         wandb_entity = 'wandb_seismic-raft_team',
         wandb_project = 'seismic-raft',
         wandb_run_id = None,
+        wandb_resume = False,
 
         name = None,
         root = '/Dataset',
