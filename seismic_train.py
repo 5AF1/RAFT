@@ -40,9 +40,9 @@ except:
 
 
 # exclude extremly large displacements
-MAX_FLOW = 400
-SUM_FREQ = 100
-VAL_FREQ = 5000
+# MAX_FLOW = 400
+# SUM_FREQ = 100
+# VAL_FREQ = 5000
 
 
 def sequence_loss(flow_preds, flow_gt, valid, gamma=0.8, max_flow=400):
@@ -143,8 +143,11 @@ class Logger:
 def wandb_train(args):
     wandb.login()
 
-    with wandb.init(project=f"wandb_{args.name}", config=args):
+    with wandb.init(entity = args.wandb_entity, project=args.wandb_project, id = args.wandb_run_id, resume=args.wandb_resume, config=args) as wandb_run:
         args = wandb.config
+
+        args_dict = vars(args)
+        pprint(args_dict)
         
         torch.manual_seed(args.seed)
         np.random.seed(args.seed)
@@ -222,8 +225,16 @@ def wandb_train(args):
                 if total_steps > args.num_steps:
                     should_keep_training = False
                     break
+    
+    PATH = Path(args.checkpoint)
+    PATH.mkdir(exist_ok=True)
+    PATH = PATH/f'{args.name}.pth'
+    torch.save(model.state_dict(), PATH)
 
 def train(args):
+    args_dict = vars(args)
+    pprint(args_dict)
+    
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     
@@ -302,11 +313,16 @@ def train(args):
 
 def get_default_args():
     args = Namespace(
-        name = 'seismic-raft',
+        wandb_entity = 'wandb_seismic-raft_team',
+        wandb_project = 'seismic-raft',
+        wandb_run_id = None,
+
+        name = None,
         root = '/Dataset',
         checkpoint = './checkpoints/',
         restore_ckpt = None,
         small=False,
+        equalize=True,
 
         lr=0.000125, num_steps=100000,
         batch_size=2,
@@ -331,50 +347,65 @@ def get_default_args():
         drop_last = True,
     )
 
-    return args
+    return get_args(args)
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--name', default='raft', help="name your experiment")
-    # parser.add_argument('--stage', help="determines which dataset to use for training")
-    parser.add_argument('--root', help="path to dataset")
-    parser.add_argument('--checkpoint', help="path to save checkpoint", default='./checkpoints/')
-    parser.add_argument('--restore_ckpt', help="restore checkpoint")
-    parser.add_argument('--small', action='store_true', help='use small model')
-    # parser.add_argument('--validation', type=str, nargs='+')
+def get_args(args = None):
 
-    parser.add_argument('--lr', type=float, default=0.00002)
-    parser.add_argument('--num_steps', type=int, default=100000)
-    parser.add_argument('--batch_size', type=int, default=6)
-    # parser.add_argument('--image_size', type=int, nargs='+', default=[384, 512])
-    parser.add_argument('--gpus', type=int, nargs='+', default=[0,1])
-    parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
+    if args is None:
+        parser = argparse.ArgumentParser()
 
-    parser.add_argument('--iters', type=int, default=12)
-    parser.add_argument('--wdecay', type=float, default=.00005)
-    parser.add_argument('--epsilon', type=float, default=1e-8)
-    parser.add_argument('--clip', type=float, default=1.0)
-    parser.add_argument('--dropout', type=float, default=0.0)
-    parser.add_argument('--gamma', type=float, default=0.8, help='exponential weighting')
-    parser.add_argument('--add_noise', action='store_true')
+        parser.add_argument('--wandb_entity', default='wandb_seismic-raft_team', help="wandb entity")
+        parser.add_argument('--wandb_project', default='seismic-raft', help="wandb project")
+        parser.add_argument('--wandb_run_id', default=None, help="wandb run id")
+        parser.add_argument('--wandb_resume', action='store_true', help="resume wandb run")
+        
+        parser.add_argument('--name', default=None, help="name your experiment")
+        # parser.add_argument('--stage', help="determines which dataset to use for training")
+        parser.add_argument('--root', help="path to dataset")
+        parser.add_argument('--checkpoint', help="path to save checkpoint", default='./checkpoints/')
+        parser.add_argument('--restore_ckpt', help="restore checkpoint")
+        parser.add_argument('--small', action='store_true', help='use small model')
+        parser.add_argument('--equalize', action='store_true', help='equalize histogram')
+        # parser.add_argument('--validation', type=str, nargs='+')
 
-    parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--log_every', type=int, default=100)
-    parser.add_argument('--validation_every', type=int, default=1000)
-    parser.add_argument('--max_flow', type=int, default=400)
+        parser.add_argument('--lr', type=float, default=0.00002)
+        parser.add_argument('--num_steps', type=int, default=100000)
+        parser.add_argument('--batch_size', type=int, default=6)
+        # parser.add_argument('--image_size', type=int, nargs='+', default=[384, 512])
+        parser.add_argument('--gpus', type=int, nargs='+', default=[0,1])
+        parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
 
-    parser.add_argument('--num_workers', type=int, default=2)
-    parser.add_argument('--pin_memory', action='store_true')
-    parser.add_argument('--shuffle', action='store_true')
-    parser.add_argument('--drop_last', action='store_true')
-    args = parser.parse_args()
+        parser.add_argument('--iters', type=int, default=12)
+        parser.add_argument('--wdecay', type=float, default=.00005)
+        parser.add_argument('--epsilon', type=float, default=1e-8)
+        parser.add_argument('--clip', type=float, default=1.0)
+        parser.add_argument('--dropout', type=float, default=0.0)
+        parser.add_argument('--gamma', type=float, default=0.8, help='exponential weighting')
+        parser.add_argument('--add_noise', action='store_true')
 
+        parser.add_argument('--seed', type=int, default=1234)
+        parser.add_argument('--log_every', type=int, default=100)
+        parser.add_argument('--validation_every', type=int, default=1000)
+        parser.add_argument('--max_flow', type=int, default=400)
+
+        parser.add_argument('--num_workers', type=int, default=2)
+        parser.add_argument('--pin_memory', action='store_true')
+        parser.add_argument('--shuffle', action='store_true')
+        parser.add_argument('--drop_last', action='store_true')
+        args = parser.parse_args()
+    
+    if args.restore_ckpt is not None and args.wandb_run_id is not None or args.wandb_resume is True:
+        args.wandb_resume = 'allow'
+
+    if args.wandb_run_id is None:
+        args.wandb_run_id = wandb.util.generate_id()
+
+    if args.name is None:
+        args.name = f'{args.wandb_project}_{args.wandb_run_id if args.wandb_run_id is not None else datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_{args.wandb_run_id}'
+    
     return args
 
 if __name__ == '__main__':
     args = get_args()
-
-    args_dict = vars(args)
-    pprint(args_dict)
 
     train(args)

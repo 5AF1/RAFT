@@ -17,8 +17,9 @@ from utils.augmentor import FlowAugmentor, SparseFlowAugmentor
 
 
 class SeismicDataset(data.Dataset):
-    def __init__(self, root: str, split: str = "Train"):
+    def __init__(self, root: str, split: str = "Train", equalize = False):
         self.init_seed = False
+        self.equalize = equalize
         self.flow_list = []
         self.image_list = []
 
@@ -49,8 +50,8 @@ class SeismicDataset(data.Dataset):
 
         flow = frame_utils.readSeismicCSV(self.flow_list[index], is_flow = True)
 
-        pp_data = frame_utils.readSeismicCSV(self.image_list[index][0])
-        ps_data = frame_utils.readSeismicCSV(self.image_list[index][1])
+        pp_data = frame_utils.readSeismicCSV(self.image_list[index][0], equalize = self.equalize)
+        ps_data = frame_utils.readSeismicCSV(self.image_list[index][1], equalize = self.equalize)
 
         pp_data = torch.from_numpy(pp_data).permute(2, 0, 1).float()
         ps_data = torch.from_numpy(ps_data).permute(2, 0, 1).float()
@@ -253,7 +254,7 @@ class HD1K(FlowDataset):
 
 def fetch_seismic_dataloader(args, split: str = "Train"):
     # Create Dataset for corresponding split
-    ds = SeismicDataset(root = args.root, split = split)
+    ds = SeismicDataset(root = args.root, split = split, equalize = args.equalize)
     dl = data.DataLoader(ds, batch_size=args.batch_size, 
                         pin_memory=args.pin_memory, shuffle=args.shuffle, 
                         num_workers=args.num_workers, drop_last=args.drop_last)
