@@ -255,7 +255,6 @@ def wandb_train(args):
 
                     if early_stopper(results['val_loss']):
                         should_keep_training = False
-                        args.name = +args.name
                         break
                     
                     model.train()
