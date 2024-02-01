@@ -84,7 +84,7 @@ def validate_seismic(model, args, iters=24):
     Kout_list = []
 
 
-    vis_sample_element = random.sample(len(val_dataset),5)
+    vis_sample_element = random.sample(range(len(val_dataset)),5)
     pp_img_list = []
     ps_img_list = []
     flow_gt_list = []
