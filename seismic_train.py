@@ -64,11 +64,11 @@ def sequence_loss(flow_preds, flow_gt, valid, gamma=0.8, max_flow=400):
     epe = epe.view(-1)[valid.view(-1)]
 
     metrics = {
-        'epe': epe.mean().item(),
-        '1px': (epe < 1).float().mean().item(),
-        '3px': (epe < 3).float().mean().item(),
-        '5px': (epe < 5).float().mean().item(),
-        'loss':flow_loss.item(),
+        'tra_epe': epe.mean().item(),
+        'tra_1px': (epe < 1).float().mean().item(),
+        'tra_3px': (epe < 3).float().mean().item(),
+        'tra_5px': (epe < 5).float().mean().item(),
+        'tra_loss':flow_loss.item(),
     }
 
     return flow_loss, metrics
@@ -162,26 +162,31 @@ def wandb_train(args):
 
         model = nn.DataParallel(RAFT(args), device_ids=args.gpus)
         print(f"Parameter Count: {count_parameters(model)}")
+        optimizer, scheduler = fetch_optimizer(args, model)
+        scaler = GradScaler(enabled=args.mixed_precision)
+        total_steps = 0
+        epoch = 0
 
         if args.restore_ckpt is not None:
-            model.load_state_dict(torch.load(args.restore_ckpt), strict=False)
+            checkpoint = torch.load(args.restore_ckpt)
+            model.load_state_dict(checkpoint['model'], strict=False)
+            optimizer.load_state_dict(checkpoint['optimizer'], strict=False)
+            scheduler = checkpoint['scheduler']
+            scaler.load_state_dict(checkpoint['scaler'], strict=False)
+            total_steps = checkpoint['steps']
+            epoch = checkpoint['epoch']
 
         model.cuda()
         model.train()
 
         train_loader = datasets.fetch_seismic_dataloader(args, split = 'Train')
         train_loader_len = len(train_loader)
-        optimizer, scheduler = fetch_optimizer(args, model)
 
         wandb.watch(model, log="all", log_freq=10)
-
-        total_steps = 0
-        scaler = GradScaler(enabled=args.mixed_precision)
         # logger = Logger(model, scheduler, args)
 
         should_keep_training = True
         while should_keep_training:
-            epoch = 0
             for i_batch, data_blob in enumerate(tqdm(train_loader, desc = f'Epoch {epoch} Step {total_steps+1} of {args.num_steps}', total = train_loader_len)):
                 optimizer.zero_grad()
                 image1, image2, flow, valid = [x.cuda() for x in data_blob]
@@ -203,28 +208,36 @@ def wandb_train(args):
                 scaler.update()
 
                 wandb.log(metrics, step=total_steps)
-                wandb.log({'last lr': (scheduler.get_last_lr()[0])}, step = total_steps)
+                wandb.log({'last_lr': (scheduler.get_last_lr()[0])}, step = total_steps)
 
                 if total_steps % args.validation_every == args.validation_every - 1:
                     PATH = Path(args.checkpoint)
                     PATH.mkdir(exist_ok=True)
                     PATH = PATH/f'{total_steps+1}_{args.name}.pth'
-                    torch.save(model.state_dict(), PATH)
+                    checkpoint = { 
+                        'epoch': epoch,
+                        'steps': total_steps,
+                        'model': model.state_dict(),
+                        'optimizer': optimizer.state_dict(),
+                        'scaler':scaler.state_dict(),
+                        'scheduler': scheduler}
+                    torch.save(checkpoint, PATH)
 
                     results = {}
                     
-                    results.update(evaluate.validate_seismic(model.module,  args.root))
+                    results.update(evaluate.validate_seismic(model.module,  args))
 
                     wandb.log(results, step=total_steps)
                     
                     model.train()
             
                 total_steps += 1
-                epoch += 1
 
                 if total_steps > args.num_steps:
                     should_keep_training = False
                     break
+                
+            epoch += 1
     
     PATH = Path(args.checkpoint)
     PATH.mkdir(exist_ok=True)
@@ -315,13 +328,13 @@ def get_default_args():
     args = Namespace(
         wandb_entity = 'wandb_seismic-raft_team',
         wandb_project = 'seismic-raft',
-        wandb_run_id = None,
-        wandb_resume = False,
+        wandb_run_id = None, #############
+        wandb_resume = False, #############
 
         name = None,
         root = '/Dataset',
         checkpoint = './checkpoints/',
-        restore_ckpt = None,
+        restore_ckpt = None, ###############
         small=False,
         equalize=True,
 

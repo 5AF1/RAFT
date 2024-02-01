@@ -10,6 +10,9 @@ import torch
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
+import wandb
+import random
+
 import datasets
 from utils import flow_viz
 from utils import frame_utils
@@ -72,14 +75,24 @@ def create_kitti_submission(model, iters=24, output_path='kitti_submission'):
 
 
 @torch.no_grad()
-def validate_seismic(model, root, equalize = False, iters=24):
+def validate_seismic(model, args, iters=24):
     """ Perform evaluation on the Seismic (valid) split """
     model.eval()
-    val_dataset = datasets.SeismicDataset(root = root, split='Validation', equalize=equalize)
+    val_dataset = datasets.SeismicDataset(root = args.root, split='Validation', equalize=args.equalize)
     epe_list = []
     Kepe_list = []
     Kout_list = []
 
+
+    vis_sample_element = random.sample(len(val_dataset),5)
+    pp_img_list = []
+    ps_img_list = []
+    flow_gt_list = []
+    valid_gt_list = []
+    flow_low_list = []
+    flow_pr_list = []
+
+    flow_loss = 0.0
 
     for val_id in range(len(val_dataset)):
         image1, image2, flow_gt, valid_gt = val_dataset[val_id]
@@ -100,6 +113,18 @@ def validate_seismic(model, root, equalize = False, iters=24):
         Kepe_list.append(epe[val].mean().item())
         Kout_list.append(out[val].cpu().numpy())
 
+        valid = (valid_gt >= 0.5) & (mag < args.max_flow)
+        i_loss = (flow_pr[0].cpu() - flow_gt).abs()
+        flow_loss += (valid[:, None] * i_loss).mean()
+
+        if val_id in vis_sample_element:
+            pp_img_list.append(wandb.Image(image1, caption=f"{(val_dataset.image_list[val_id][0]).stem}->PP"))
+            ps_img_list.append(wandb.Image(image2, caption=f"{(val_dataset.image_list[val_id][1]).stem}->PS"))
+            flow_gt_list.append(wandb.Image(flow_gt, caption=f"{(val_dataset.flow_list[val_id]).stem}->flow_gt"))
+            valid_gt_list.append(wandb.Image(valid_gt, caption=f"{(val_dataset.flow_list[val_id]).stem}->valid_gt"))
+            flow_low_list.append(wandb.Image(flow_low, caption=f"{(val_dataset.image_list[val_id][0]).stem}->flow_low"))
+            flow_pr_list.append(wandb.Image(flow_pr, caption=f"{(val_dataset.image_list[val_id][0]).stem}->flow_pr"))
+
     # epe = np.mean(np.concatenate(epe_list))
     epe_all = np.concatenate(epe_list)
     epe = np.mean(epe_all)
@@ -113,7 +138,10 @@ def validate_seismic(model, root, equalize = False, iters=24):
     Kepe = np.mean(Kepe_list)
     f1 = 100 * np.mean(Kout_list)
 
-    return {'val_kitti-epe': Kepe, 'val_kitti-f1': f1, 'val_epe':epe, 'val_px1':px1, 'val_px3':px3, 'val_px5':px5}
+    return {'val_kitti-epe': Kepe, 'val_kitti-f1': f1, 'val_epe':epe, 'val_px1':px1, 'val_px3':px3, 'val_px5':px5, 'val_flow_loss':flow_loss,
+            'pp_img_list':pp_img_list, 'ps_img_list':ps_img_list, 'flow_gt_list':flow_gt_list, 
+            'valid_gt_list':valid_gt_list, 'flow_low_list':flow_low_list, 'flow_pr_list':flow_pr_list, 
+            }
 
 @torch.no_grad()
 def validate_chairs(model, iters=24):
