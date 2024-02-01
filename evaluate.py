@@ -138,7 +138,7 @@ def validate_seismic(model, args, iters=24):
     Kepe = np.mean(Kepe_list)
     f1 = 100 * np.mean(Kout_list)
 
-    return {'val_kitti-epe': Kepe, 'val_kitti-f1': f1, 'val_epe':epe, 'val_px1':px1, 'val_px3':px3, 'val_px5':px5, 'val_flow_loss':flow_loss,
+    return {'val_kitti-epe': Kepe, 'val_kitti-f1': f1, 'val_epe':epe, 'val_px1':px1, 'val_px3':px3, 'val_px5':px5, 'val_loss':flow_loss,
             'pp_img_list':pp_img_list, 'ps_img_list':ps_img_list, 'flow_gt_list':flow_gt_list, 
             'valid_gt_list':valid_gt_list, 'flow_low_list':flow_low_list, 'flow_pr_list':flow_pr_list, 
             }

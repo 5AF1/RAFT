@@ -9,7 +9,7 @@ import evaluate
 from raft import SeismicRAFT as RAFT
 
 from pathlib import Path
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 import numpy as np
 import random
 from pprint import pprint
@@ -141,6 +141,27 @@ class Logger:
     def close(self):
         self.writer.close()
 
+class EarlyStopper:
+    def __init__(self, patience=1, threshold=0):
+        self.patience = patience
+        self.threshold = threshold
+        self.counter = 0
+        self.min_validation_loss = float('inf')
+        self.finish_flag = False
+
+    def __call__(self, validation_loss = None):
+        if validation_loss is None:
+            return self.finish_flag
+        if validation_loss < self.min_validation_loss:
+            self.min_validation_loss = validation_loss
+            self.counter = 0
+        elif validation_loss > (self.min_validation_loss + self.threshold):
+            self.counter += 1
+            if self.counter >= self.patience:
+                self.finish_flag = True
+                return True
+        return False
+
 def wandb_train(args):
     wandb.login()
 
@@ -187,6 +208,8 @@ def wandb_train(args):
         # logger = Logger(model, scheduler, args)
 
         should_keep_training = True
+        early_stopper = EarlyStopper(patience=args.early_stop_patience, threshold=args.early_stop_threshold)
+
         while should_keep_training:
             for i_batch, data_blob in enumerate(tqdm(train_loader, desc = f'Epoch {epoch} Step {total_steps+1} of {args.num_steps}', total = train_loader_len)):
                 optimizer.zero_grad()
@@ -229,6 +252,11 @@ def wandb_train(args):
                     results.update(evaluate.validate_seismic(model.module,  args))
 
                     wandb.log(results, step=total_steps)
+
+                    if early_stopper(results['val_loss']):
+                        should_keep_training = False
+                        args.name = +args.name
+                        break
                     
                     model.train()
             
@@ -242,7 +270,7 @@ def wandb_train(args):
     
     PATH = Path(args.checkpoint)
     PATH.mkdir(exist_ok=True)
-    PATH = PATH/f'{args.name}.pth'
+    PATH = PATH/f'{"early_" if early_stopper() else ''}{args.name}.pth'
     torch.save(model.state_dict(), PATH)
 
 def train(args):
@@ -360,6 +388,9 @@ def get_default_args():
         pin_memory = False,
         shuffle = True,
         drop_last = True,
+
+        early_stop_patience = 10,
+        early_stop_threshold = 50,
     )
 
     return get_args(args)
@@ -407,6 +438,9 @@ def get_args(args = None):
         parser.add_argument('--pin_memory', action='store_true')
         parser.add_argument('--shuffle', action='store_true')
         parser.add_argument('--drop_last', action='store_true')
+
+        parser.add_argument('--early_stop_patience', type=int, default=10)
+        parser.add_argument('--early_stop_threshold', type=float, default=50)
         args = parser.parse_args()
     
     if args.restore_ckpt is not None and args.wandb_run_id is not None or args.wandb_resume is True:
