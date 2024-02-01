@@ -269,7 +269,7 @@ def wandb_train(args):
     
     PATH = Path(args.checkpoint)
     PATH.mkdir(exist_ok=True)
-    PATH = PATH/f'{"early_" if early_stopper() else ''}{args.name}.pth'
+    PATH = PATH/f'{"early_" if early_stopper() else ""}{args.name}.pth'
     torch.save(model.state_dict(), PATH)
 
 def train(args):
