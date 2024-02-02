@@ -194,7 +194,7 @@ def wandb_train(args):
             model.load_state_dict(checkpoint['model'], strict=False)
             optimizer.load_state_dict(checkpoint['optimizer'])
             scheduler = checkpoint['scheduler']
-            scaler.load_state_dict(checkpoint['scaler'], strict=False)
+            scaler.load_state_dict(checkpoint['scaler'])
             total_steps = checkpoint['steps']
             epoch = checkpoint['epoch']
 
