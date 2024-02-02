@@ -192,7 +192,7 @@ def wandb_train(args):
         if args.restore_ckpt is not None:
             checkpoint = torch.load(args.restore_ckpt)
             model.load_state_dict(checkpoint['model'], strict=False)
-            optimizer.load_state_dict(checkpoint['optimizer'], strict=False)
+            optimizer.load_state_dict(checkpoint['optimizer'])
             scheduler = checkpoint['scheduler']
             scaler.load_state_dict(checkpoint['scaler'], strict=False)
             total_steps = checkpoint['steps']
