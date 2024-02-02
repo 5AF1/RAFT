@@ -75,6 +75,17 @@ def create_kitti_submission(model, iters=24, output_path='kitti_submission'):
 
 
 @torch.no_grad()
+def create_seismic_submission(model, args, split = 'Validation', iters=24):
+    model.eval()
+    dataset = datasets.SeismicDataset(root = args.root, split=split, equalize=args.equalize)
+    for ds_id in range(len(dataset)):
+        image1, image2, flow_gt, valid_gt = val_dataset[ds_id]
+        image1 = image1[None].cuda()
+        image2 = image2[None].cuda()
+
+        flow_low, flow_pr = model(image1, image2, iters=iters, test_mode=True)
+
+@torch.no_grad()
 def validate_seismic(model, args, iters=24):
     """ Perform evaluation on the Seismic (valid) split """
     model.eval()
