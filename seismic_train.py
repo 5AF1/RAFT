@@ -352,45 +352,46 @@ def train(args):
 
     return PATH
 
-def get_default_args():
-    args = Namespace(
-        wandb_entity = 'wandb_seismic-raft_team',
-        wandb_project = 'seismic-raft',
-        wandb_run_id = None, #############
-        wandb_resume = False, #############
+def get_default_args(args = None):
+    if args is None:
+        args = Namespace(
+            wandb_entity = 'wandb_seismic-raft_team',
+            wandb_project = 'seismic-raft',
+            wandb_run_id = None, #############
+            wandb_resume = False, #############
 
-        name = None,
-        root = '/Dataset',
-        checkpoint = './checkpoints/',
-        restore_ckpt = None, ###############
-        small=False,
-        equalize=True,
+            name = None,
+            root = '/Dataset',
+            checkpoint = './checkpoints/',
+            restore_ckpt = None, ###############
+            small=False,
+            equalize=True,
 
-        lr=0.000125, num_steps=100000,
-        batch_size=2,
-        gpus=[0],
-        mixed_precision=False,
+            lr=0.000125, num_steps=100000,
+            batch_size=2,
+            gpus=[0],
+            mixed_precision=False,
 
-        iters=12,
-        wdecay=1e-05,epsilon=1e-08, 
-        clip=1.0,
-        dropout=0.0,
-        gamma=0.85,
-        add_noise=False,
-        
-        seed = 1234,
-        log_every = 100,
-        validation_every = 1000,
-        max_flow = 400,
+            iters=12,
+            wdecay=1e-05,epsilon=1e-08, 
+            clip=1.0,
+            dropout=0.0,
+            gamma=0.85,
+            add_noise=False,
+            
+            seed = 1234,
+            log_every = 100,
+            validation_every = 1000,
+            max_flow = 400,
 
-        num_workers = 2,
-        pin_memory = False,
-        shuffle = True,
-        drop_last = True,
+            num_workers = 2,
+            pin_memory = False,
+            shuffle = True,
+            drop_last = True,
 
-        early_stop_patience = 10,
-        early_stop_threshold = 50,
-    )
+            early_stop_patience = 10,
+            early_stop_threshold = 50,
+        )
 
     return get_args(args)
 
