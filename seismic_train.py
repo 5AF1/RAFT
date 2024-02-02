@@ -9,7 +9,7 @@ import evaluate
 from raft import SeismicRAFT as RAFT
 
 from pathlib import Path
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 import numpy as np
 import random
 from pprint import pprint
