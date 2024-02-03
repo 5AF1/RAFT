@@ -75,15 +75,29 @@ def create_kitti_submission(model, iters=24, output_path='kitti_submission'):
 
 
 @torch.no_grad()
-def create_seismic_submission(model, args, split = 'Validation', iters=24):
+def create_seismic_submission(model, args, output_path = None, split = 'Validation', iters=24):
+    if output_path is None:
+        flow_file_dir = Path(args.checkpoint)/args.name/f'{split}_data'
+    else:
+        flow_file_dir = Path(output_path)/f'{split}_data'
+    flow_file_dir.mkdir(parents=True, exist_ok=True)
+
     model.eval()
     dataset = datasets.SeismicDataset(root = args.root, split=split, equalize=args.equalize)
     for ds_id in range(len(dataset)):
-        image1, image2, flow_gt, valid_gt = val_dataset[ds_id]
+        image1, image2, flow_gt, valid_gt = dataset[ds_id]
         image1 = image1[None].cuda()
         image2 = image2[None].cuda()
 
         flow_low, flow_pr = model(image1, image2, iters=iters, test_mode=True)
+        np_flow_pr = flow_pr.squeeze().numpy(force = True)
+
+        flow_file_parent, flow_file_name = dataset.flow_list[ds_id].parts[-2:]
+        flow_file = flow_file_dir/flow_file_parent/flow_file_name
+        flow_file.mkdir(exist_ok=True)
+
+        frame_utils.writeSeismicFlowCSV(flow_file, np_flow_pr)
+
 
 @torch.no_grad()
 def validate_seismic(model, args, iters=24):

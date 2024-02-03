@@ -254,6 +254,7 @@ def wandb_train(args):
                     wandb.log(results, step=total_steps)
 
                     if early_stopper(results['val_loss']):
+                        print('Early Stopping.')
                         should_keep_training = False
                         break
                     
@@ -271,6 +272,8 @@ def wandb_train(args):
     PATH.mkdir(exist_ok=True)
     PATH = PATH/f'{"early_" if early_stopper() else ""}{args.name}.pth'
     torch.save(model.state_dict(), PATH)
+
+    evaluate.create_seismic_submission(model.module,  args, split = 'Validation')
 
 def train(args):
     args_dict = vars(args)

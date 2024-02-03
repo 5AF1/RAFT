@@ -36,6 +36,10 @@ def readSeismicCSV(file_path, is_flow = False, equalize = False):
     
     return np.resize(data, (h, w, 1))
 
+def writeSeismicFlowCSV(file_path, data):
+    df = pd.DataFrame(data*0.002)
+    df.to_csv(file_path, header=False, index=False)
+
 def readFlow(fn):
     """ Read .flo file in Middlebury format"""
     # Code adapted from:
