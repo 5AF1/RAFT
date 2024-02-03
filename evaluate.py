@@ -95,7 +95,7 @@ def create_seismic_submission(model, args, output_path = None, split = 'Validati
 
         flow_file_parent, flow_file_name = dataset.flow_list[ds_id].parts[-2:]
         flow_file = flow_file_dir/flow_file_parent/flow_file_name
-        flow_file.mkdir(exist_ok=True)
+        flow_file.parent.mkdir(exist_ok=True)
 
         frame_utils.writeSeismicFlowCSV(flow_file, np_flow_pr)
 
