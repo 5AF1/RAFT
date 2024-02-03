@@ -10,6 +10,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+from tqdm import trange
 
 import wandb
 import random
@@ -85,7 +86,7 @@ def create_seismic_submission(model, args, output_path = None, split = 'Validati
 
     model.eval()
     dataset = datasets.SeismicDataset(root = args.root, split=split, equalize=args.equalize)
-    for ds_id in range(len(dataset)):
+    for ds_id in trange(len(dataset),desc=f'Saving {split} |', leave=True):
         image1, image2, flow_gt, valid_gt = dataset[ds_id]
         image1 = image1[None].cuda()
         image2 = image2[None].cuda()
@@ -120,7 +121,7 @@ def validate_seismic(model, args, iters=24):
 
     flow_loss = 0.0
 
-    for val_id in range(len(val_dataset)):
+    for val_id in trange(len(val_dataset), desc='Validation |', leave=True):
         image1, image2, flow_gt, valid_gt = val_dataset[val_id]
         image1 = image1[None].cuda()
         image2 = image2[None].cuda()
