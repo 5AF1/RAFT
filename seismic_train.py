@@ -237,7 +237,7 @@ def wandb_train(args):
                 if total_steps % args.validation_every == args.validation_every - 1:
                     PATH = Path(args.checkpoint)
                     PATH.mkdir(exist_ok=True)
-                    PATH = PATH/f'{total_steps+1}_{args.name}.pth'
+                    PATH = PATH/f'{args.name}_{total_steps+1}.pth'
                     checkpoint = { 
                         'epoch': epoch,
                         'steps': total_steps,
