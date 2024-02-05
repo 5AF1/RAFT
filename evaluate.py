@@ -121,7 +121,7 @@ def validate_seismic(model, args, iters=24):
 
     flow_loss = 0.0
 
-    for val_id in trange(len(val_dataset), desc='Validation |', leave=True):
+    for val_id in trange(len(val_dataset), desc='Validation |', leave=False):
         image1, image2, flow_gt, valid_gt = val_dataset[val_id]
         image1 = image1[None].cuda()
         image2 = image2[None].cuda()
