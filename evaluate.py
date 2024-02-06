@@ -86,7 +86,7 @@ def create_seismic_submission(model, args, output_path = None, split = 'Validati
 
     model.eval()
     dataset = datasets.SeismicDataset(root = args.root, split=split, equalize=args.equalize)
-    for ds_id in trange(len(dataset),desc=f'Saving {split} |', leave=True):
+    for ds_id in tqdm(list(range(len(dataset))), desc = f'Saving {split}'):
         image1, image2, flow_gt, valid_gt = dataset[ds_id]
         image1 = image1[None].cuda()
         image2 = image2[None].cuda()
