@@ -58,7 +58,8 @@ class SeismicDataset(data.Dataset):
         flow = torch.from_numpy(flow).permute(2, 0, 1).float()
 
 
-        valid = (flow[0].abs() < 1000).float()
+        # valid = (flow[0].abs() < 1000).float()
+        valid = (flow[0].abs() != 0.0).float()
 
         return pp_data, ps_data, flow, valid
 
