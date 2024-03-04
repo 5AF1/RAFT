@@ -163,7 +163,7 @@ class EarlyStopper:
         return False
 
 def wandb_train(args):
-    wandb.login()
+    wandb.login(key = args.wandb_auth)
 
     with wandb.init(entity = args.wandb_entity, project=args.wandb_project, id = args.wandb_run_id, resume=args.wandb_resume, config=args) as wandb_run:
         args = wandb.config
@@ -358,6 +358,7 @@ def train(args):
 def get_default_args(args = None):
     if args is None:
         args = Namespace(
+            wandb_auth = '',
             wandb_entity = 'wandb_seismic-raft_team',
             wandb_project = 'seismic-raft',
             wandb_run_id = None, #############
@@ -403,6 +404,7 @@ def get_args(args = None):
     if args is None:
         parser = argparse.ArgumentParser()
 
+        parser.add_argument('--wandb_auth', required=True, help='The wandb_auth argument is required. You can get the auth token from https://wandb.ai/authorize')
         parser.add_argument('--wandb_entity', default='wandb_seismic-raft_team', help="wandb entity")
         parser.add_argument('--wandb_project', default='seismic-raft', help="wandb project")
         parser.add_argument('--wandb_run_id', default=None, help="wandb run id")
