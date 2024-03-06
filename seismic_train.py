@@ -462,4 +462,4 @@ def get_args(args = None):
 if __name__ == '__main__':
     args = get_args()
 
-    train(args)
+    wandb_train(args)
