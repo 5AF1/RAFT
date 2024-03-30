@@ -16,6 +16,45 @@ from utils import frame_utils
 from utils.augmentor import FlowAugmentor, SparseFlowAugmentor
 
 
+class SeismicOriginalDataset(data.Dataset):
+    def __init__(self, root: str, equalize = False):
+        self.init_seed = False
+        self.equalize = equalize
+        self.image_list = []
+
+        root = Path(root)
+        PP_root   = root / 'PP_data'
+        PS_root   = root / 'PS_data'
+
+        for PS_file in list(PS_root.glob('**/*.csv')):
+            PP_file_name = PS_file.name.split('_')[1]
+            PP_file = PP_root/PP_file_name
+
+            self.image_list += [ [PP_file, PS_file] ]
+
+    def __getitem__(self, index):
+
+        if not self.init_seed:
+            worker_info = torch.utils.data.get_worker_info()
+            if worker_info is not None:
+                torch.manual_seed(worker_info.id)
+                np.random.seed(worker_info.id)
+                random.seed(worker_info.id)
+                self.init_seed = True
+
+        index = index % len(self.image_list)
+
+        pp_data = frame_utils.readSeismicCSV(self.image_list[index][0], equalize = self.equalize)
+        ps_data = frame_utils.readSeismicCSV(self.image_list[index][1], equalize = self.equalize)
+
+        pp_data = torch.from_numpy(pp_data).permute(2, 0, 1).float()
+        ps_data = torch.from_numpy(ps_data).permute(2, 0, 1).float()
+
+        return pp_data, ps_data
+        
+    def __len__(self):
+        return len(self.image_list)
+
 class SeismicDataset(data.Dataset):
     def __init__(self, root: str, split: str = "Train", equalize = False):
         self.init_seed = False
