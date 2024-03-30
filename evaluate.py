@@ -102,6 +102,29 @@ def create_seismic_submission(model, args, output_path = None, split = 'Validati
 
 
 @torch.no_grad()
+def create_flow_submission(model, args, iters=24):
+    if args.output_path is None:
+        flow_file_dir = Path(args.root)/'Flow_data'/Path(args.checkpoint_file).stem
+    else:
+        flow_file_dir = Path(args.output_path)/Path(args.checkpoint_file).stem
+    flow_file_dir.mkdir(parents=True, exist_ok=True)
+
+    model.eval()
+    dataset = datasets.SeismicOriginalDataset(root = args.root, equalize=args.equalize)
+    for ds_id in tqdm(list(range(len(dataset))), desc = f'Saving for {Path(args.checkpoint_file).stem}'):
+        image1, image2 = dataset[ds_id]
+        image1 = image1[None].cuda()
+        image2 = image2[None].cuda()
+
+        flow_low, flow_pr = model(image1, image2, iters=iters, test_mode=True)
+        np_flow_pr = flow_pr.squeeze().numpy(force = True)
+
+        flow_file =  flow_file_dir / dataset.image_list[ds_id][0].name
+        flow_file.parent.mkdir(exist_ok=True)
+
+        frame_utils.writeSeismicFlowCSV(flow_file, np_flow_pr)
+
+@torch.no_grad()
 def validate_seismic(model, args, iters=24):
     """ Perform evaluation on the Seismic (valid) split """
     model.eval()
