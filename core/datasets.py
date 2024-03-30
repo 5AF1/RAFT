@@ -27,7 +27,7 @@ class SeismicOriginalDataset(data.Dataset):
         PS_root   = root / 'PS_data'
 
         for PS_file in list(PS_root.glob('**/*.csv')):
-            PP_file_name = PS_file.name.split('_')[1]
+            PP_file_name = PS_file.name#.split('_')[1]
             PP_file = PP_root/PP_file_name
 
             self.image_list += [ [PP_file, PS_file] ]
