@@ -61,5 +61,5 @@ if __name__ == '__main__':
     args = get_args()
 
     model = get_model(args)
-    evaluate.create_flow_submission(model,  args)
+    evaluate.create_flow_submission(model.module,  args)
 
