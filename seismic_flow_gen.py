@@ -53,7 +53,7 @@ def get_model(args):
     model = nn.DataParallel(RAFT(args), device_ids=args.gpus)
     checkpoint = torch.load(Path(args.checkpoint_file))
     model.load_state_dict(checkpoint['model'], strict=False)
-
+    model.cuda()
     return model
 
 
