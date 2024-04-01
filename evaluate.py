@@ -93,7 +93,7 @@ def create_seismic_submission(model, args, output_path = None, split = 'Validati
 
         flow_low, flow_pr = model(image1, image2, iters=iters, test_mode=True)
         # np_flow_pr = flow_pr.squeeze().numpy(force = True)
-        np_flow_pr = flow_pr.squeeze().numpy()
+        np_flow_pr = flow_pr.squeeze().cpu().numpy()
 
         flow_file_parent, flow_file_name = dataset.flow_list[ds_id].parts[-2:]
         flow_file = flow_file_dir/flow_file_parent/flow_file_name
