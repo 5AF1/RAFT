@@ -99,8 +99,9 @@ class SeismicDataset(data.Dataset):
 
         # valid = (flow[0].abs() < 1000).float()
         valid = (flow[0].abs() != 0.0).float()
-        p65 = int(valid.shape[0] * 0.75)
-        valid[p65:] = 0.0
+        p80 = int(valid.shape[0] * 0.80)
+        valid[p80:] = 0.0
+        valid[:95] = 0.0
 
         return pp_data, ps_data, flow, valid
 
