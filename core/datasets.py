@@ -99,7 +99,7 @@ class SeismicDataset(data.Dataset):
         ps_data = torch.from_numpy(ps_data).permute(2, 0, 1).float()
         flow = torch.from_numpy(flow).permute(2, 0, 1).float()
 
-        p80 = int(pp_data.shape[0] * 0.80)
+        p80 = int(pp_data.shape[1] * 0.80)
         flow[:,:95,:]   = 0.0
         flow[:,p80:,:]  = 0.0
         pp_data[:,:95,:]  = 0.0
