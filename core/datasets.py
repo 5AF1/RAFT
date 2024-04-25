@@ -50,6 +50,9 @@ class SeismicOriginalDataset(data.Dataset):
         pp_data = torch.from_numpy(pp_data).permute(2, 0, 1).float()
         ps_data = torch.from_numpy(ps_data).permute(2, 0, 1).float()
 
+        pp_data[:95]  = 0.0
+        ps_data[:175] = 0.0
+
         return pp_data, ps_data
         
     def __len__(self):
@@ -96,12 +99,16 @@ class SeismicDataset(data.Dataset):
         ps_data = torch.from_numpy(ps_data).permute(2, 0, 1).float()
         flow = torch.from_numpy(flow).permute(2, 0, 1).float()
 
+        p80 = int(pp_data.shape[0] * 0.80)
+        flow[:95]   = 0.0
+        flow[p80:]  = 0.0
+        pp_data[:95]  = 0.0
+        ps_data[:175] = 0.0
 
         # valid = (flow[0].abs() < 1000).float()
         valid = (flow[0].abs() != 0.0).float()
-        p80 = int(valid.shape[0] * 0.80)
-        valid[p80:] = 0.0
-        valid[:95] = 0.0
+        # valid[p80:] = 0.0
+        # valid[:95] = 0.0
 
         return pp_data, ps_data, flow, valid
 
