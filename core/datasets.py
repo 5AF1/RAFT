@@ -50,8 +50,8 @@ class SeismicOriginalDataset(data.Dataset):
         pp_data = torch.from_numpy(pp_data).permute(2, 0, 1).float()
         ps_data = torch.from_numpy(ps_data).permute(2, 0, 1).float()
 
-        pp_data[:,:95,:]  = 0.0
-        ps_data[:,:175,:] = 0.0
+        # pp_data[:,:95,:]  = 0.0
+        # ps_data[:,:175,:] = 0.0
 
         return pp_data, ps_data
         
