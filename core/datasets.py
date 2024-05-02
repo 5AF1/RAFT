@@ -63,20 +63,24 @@ class SeismicDataset(data.Dataset):
         self.init_seed = False
         self.equalize = equalize
         self.flow_list = []
+        self.valid_list = []
         self.image_list = []
 
         root = Path(root)
-        PP_root   = root / 'PP_data'
-        PS_root   = root / 'PS_train_txt' / f'{split}_data'
-        flow_root = root / 'label_txt'    / f'{split}_data'
+        PP_root    = root / 'PP_data'
+        PS_root    = root / 'PS_train_txt' / f'{split}_data'
+        flow_root  = root / 'label_txt'    / f'{split}_data'
+        valid_root = root / 'gt_txt'       / f'{split}_data'
 
         for PS_file in list(PS_root.glob('**/*.csv')):
             PP_file_name = PS_file.name.split('_')[1]
             PP_file = PP_root/PP_file_name
             flow_file = list(flow_root.glob(f'**/{PS_file.name}'))[0]
+            valid_file = list(valid_root.glob(f'**/{PS_file.name}'))[0]
 
             self.image_list += [ [PP_file, PS_file] ]
             self.flow_list += [flow_file]
+            self.valid_list += [valid_file]
 
     def __getitem__(self, index):
 
@@ -91,6 +95,7 @@ class SeismicDataset(data.Dataset):
         index = index % len(self.image_list)
 
         flow = frame_utils.readSeismicCSV(self.flow_list[index], is_flow = True)
+        valid = frame_utils.readSeismicCSV(self.valid_list[index])
 
         pp_data = frame_utils.readSeismicCSV(self.image_list[index][0], equalize = self.equalize)
         ps_data = frame_utils.readSeismicCSV(self.image_list[index][1], equalize = self.equalize)
@@ -98,16 +103,17 @@ class SeismicDataset(data.Dataset):
         pp_data = torch.from_numpy(pp_data).permute(2, 0, 1).float()
         ps_data = torch.from_numpy(ps_data).permute(2, 0, 1).float()
         flow = torch.from_numpy(flow).permute(2, 0, 1).float()
+        valid = torch.from_numpy(valid).permute(2, 0, 1).float()[0]
 
-        p80 = int(pp_data.shape[1] * 0.80)
+        # p80 = int(pp_data.shape[1] * 0.80)
         # flow[:,:95,:]   = 0.0
         # flow[:,p80:,:]  = 0.0
         # pp_data[:,:95,:]  = 0.0
         # ps_data[:,:175,:] = 0.0
 
         # valid = (flow[0].abs() < 1000).float()
-        valid = (flow[0].abs() != 0.0).float()
-        valid[p80:] = 0.0
+        # valid = (flow[0].abs() != 0.0).float()
+        # valid[p80:] = 0.0
         # valid[:95] = 0.0
 
         return pp_data, ps_data, flow, valid
