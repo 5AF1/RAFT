@@ -67,16 +67,32 @@ class SeismicDataset(data.Dataset):
         self.image_list = []
 
         root = Path(root)
+        
         PP_root    = root / 'PP_data'
-        PS_root    = root / 'PS_train_txt' / f'{split}_data'
-        flow_root  = root / 'label_txt'    / f'{split}_data'
-        valid_root = root / 'gt_txt'       / f'{split}_data'
+        PS_root    = root / 'synthetic PS' / 'PS_train_txt' / f'{split}_data'
+        flow_root  = root / 'synthetic PS' / 'label_txt'    / f'{split}_data'
+        valid_root = root / 'synthetic PS' / 'gt_txt'       / f'{split}_data'
 
         for PS_file in list(PS_root.glob('**/*.csv')):
             PP_file_name = PS_file.name.split('_')[1]
             PP_file = PP_root/PP_file_name
             flow_file = list(flow_root.glob(f'**/{PS_file.name}'))[0]
             valid_file = list(valid_root.glob(f'**/{PS_file.name}'))[0]
+
+            self.image_list += [ [PP_file, PS_file] ]
+            self.flow_list += [flow_file]
+            self.valid_list += [valid_file]
+
+        PS_root    = root / 'PS_data'
+        PP_root    = root / 'synthetic PP' / 'PP_train_txt' / f'{split}_data'
+        flow_root  = root / 'synthetic PP' / 'label_txt'    / f'{split}_data'
+        valid_root = root / 'synthetic PP' / 'gt_txt'       / f'{split}_data'
+
+        for PP_file in list(PP_root.glob('**/*.csv')):
+            PS_file_name = PP_file.name.split('_')[1]
+            PS_file = PS_root/PS_file_name
+            flow_file = list(flow_root.glob(f'**/{PP_file.name}'))[0]
+            valid_file = list(valid_root.glob(f'**/{PP_file.name}'))[0]
 
             self.image_list += [ [PP_file, PS_file] ]
             self.flow_list += [flow_file]
