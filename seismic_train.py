@@ -141,6 +141,18 @@ def wandb_train(args):
             checkpoint = torch.load(args.restore_ckpt)
             model.load_state_dict(checkpoint['model'], strict=False)
             optimizer.load_state_dict(checkpoint['optimizer'])
+            for param in optimizer.state.values():
+                # Not sure there are any global tensors in the state dict
+                if isinstance(param, torch.Tensor):
+                    param.data = param.data.to(0)
+                    if param._grad is not None:
+                        param._grad.data = param._grad.data.to(0)
+                elif isinstance(param, dict):
+                    for subparam in param.values():
+                        if isinstance(subparam, torch.Tensor):
+                            subparam.data = subparam.data.to(0)
+                            if subparam._grad is not None:
+                                subparam._grad.data = subparam._grad.data.to(0)
             scheduler = checkpoint['scheduler']
             scaler.load_state_dict(checkpoint['scaler'])
             total_steps = checkpoint['steps']
