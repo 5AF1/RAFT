@@ -140,23 +140,26 @@ def wandb_train(args):
         if args.restore_ckpt is not None:
             checkpoint = torch.load(args.restore_ckpt)
             model.load_state_dict(checkpoint['model'], strict=False)
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            for param in optimizer.state.values():
-                # Not sure there are any global tensors in the state dict
-                if isinstance(param, torch.Tensor):
-                    param.data = param.data.to(0)
-                    if param._grad is not None:
-                        param._grad.data = param._grad.data.to(0)
-                elif isinstance(param, dict):
-                    for subparam in param.values():
-                        if isinstance(subparam, torch.Tensor):
-                            subparam.data = subparam.data.to(0)
-                            if subparam._grad is not None:
-                                subparam._grad.data = subparam._grad.data.to(0)
-            scheduler = checkpoint['scheduler']
+            if args.restore_optim:
+                optimizer.load_state_dict(checkpoint['optimizer'])
+                for param in optimizer.state.values():
+                    # Not sure there are any global tensors in the state dict
+                    if isinstance(param, torch.Tensor):
+                        param.data = param.data.to(0)
+                        if param._grad is not None:
+                            param._grad.data = param._grad.data.to(0)
+                    elif isinstance(param, dict):
+                        for subparam in param.values():
+                            if isinstance(subparam, torch.Tensor):
+                                subparam.data = subparam.data.to(0)
+                                if subparam._grad is not None:
+                                    subparam._grad.data = subparam._grad.data.to(0)
+                scheduler = checkpoint['scheduler']
             scaler.load_state_dict(checkpoint['scaler'])
-            total_steps = checkpoint['steps']
-            epoch = checkpoint['epoch']
+
+            if args.wandb_resume == 'allow':
+                total_steps = checkpoint['steps']
+                epoch = checkpoint['epoch']
 
         model.cuda()
         model.train()
@@ -247,8 +250,11 @@ def get_default_args(args = None):
 
             name = None,
             root = '/Dataset',
+            original_pp = True,
+            original_ps = False,
             checkpoint = './checkpoints/',
             restore_ckpt = None, ###############
+            restore_optim = False,
             small=False,
             equalize=True,
 
@@ -294,8 +300,13 @@ def get_args(args = None):
         parser.add_argument('--name', default=None, help="name your experiment")
         # parser.add_argument('--stage', help="determines which dataset to use for training")
         parser.add_argument('--root', help="path to dataset")
+        parser.add_argument('--original_pp', action='store_true')
+        parser.add_argument('--original_ps', action='store_true')
+        
         parser.add_argument('--checkpoint', help="path to save checkpoint", default='./checkpoints/')
         parser.add_argument('--restore_ckpt', help="restore checkpoint")
+        parser.add_argument('--restore_optim', action='store_true')
+
         parser.add_argument('--small', action='store_true', help='use small model')
         parser.add_argument('--equalize', action='store_true', help='equalize histogram')
         # parser.add_argument('--validation', type=str, nargs='+')
@@ -337,6 +348,9 @@ def get_args(args = None):
 
     if args.name is None:
         args.name = f'{args.wandb_project}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_{args.wandb_run_id}'
+
+    if args.original_pp == False and args.original_ps == False:
+        args.original_pp = True
     
     return args
 
