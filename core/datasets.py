@@ -59,7 +59,7 @@ class SeismicOriginalDataset(data.Dataset):
         return len(self.image_list)
 
 class SeismicDataset(data.Dataset):
-    def __init__(self, root: str, split: str = "Train", equalize = False):
+    def __init__(self, root: str, split: str = "Train", equalize = False, args = None):
         self.init_seed = False
         self.equalize = equalize
         self.flow_list = []
@@ -328,7 +328,7 @@ class HD1K(FlowDataset):
 
 def fetch_seismic_dataloader(args, split: str = "Train"):
     # Create Dataset for corresponding split
-    ds = SeismicDataset(root = args.root, split = split, equalize = args.equalize)
+    ds = SeismicDataset(root = args.root, split = split, equalize = args.equalize, args=args)
     dl = data.DataLoader(ds, batch_size=args.batch_size, 
                         pin_memory=args.pin_memory, shuffle=args.shuffle, 
                         num_workers=args.num_workers, drop_last=args.drop_last)
