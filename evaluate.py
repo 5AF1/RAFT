@@ -85,7 +85,7 @@ def create_seismic_submission(model, args, output_path = None, split = 'Validati
     flow_file_dir.mkdir(parents=True, exist_ok=True)
 
     model.eval()
-    dataset = datasets.SeismicDataset(root = args.root, split=split, equalize=args.equalize)
+    dataset = datasets.SeismicDataset(root = args.root, split=split, equalize=args.equalize, args = args)
     for ds_id in tqdm(list(range(len(dataset))), desc = f'Saving {split}'):
         image1, image2, flow_gt, valid_gt = dataset[ds_id]
         image1 = image1[None].cuda()
@@ -130,7 +130,7 @@ def create_flow_submission(model, args, iters=24):
 def validate_seismic(model, args, iters=24):
     """ Perform evaluation on the Seismic (valid) split """
     model.eval()
-    val_dataset = datasets.SeismicDataset(root = args.root, split='Validation', equalize=args.equalize)
+    val_dataset = datasets.SeismicDataset(root = args.root, split='Validation', equalize=args.equalize, args = args)
     epe_list = []
     Kepe_list = []
     Kout_list = []
