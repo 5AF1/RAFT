@@ -130,7 +130,7 @@ def create_flow_submission(model, args, iters=24):
 def validate_seismic(model, args, iters=24):
     """ Perform evaluation on the Seismic (valid) split """
     model.eval()
-    ret = {}
+    ret = {'val_loss':0}
 
     val_dataset = datasets.SeismicDataset(root = args.root, split='Validation', equalize=args.equalize, original_pp = True, original_ps = False)
     if len(val_dataset) != 0:   
@@ -193,6 +193,7 @@ def validate_seismic(model, args, iters=24):
         Kepe = np.mean(Kepe_list)
         f1 = 100 * np.mean(Kout_list)
 
+        ret['val_loss'] += flow_loss
         ret.update({
             'val_og_pp/val_kitti-epe': Kepe, 
             'val_og_pp/val_kitti-f1': f1, 
@@ -270,6 +271,7 @@ def validate_seismic(model, args, iters=24):
         Kepe = np.mean(Kepe_list)
         f1 = 100 * np.mean(Kout_list)
 
+        ret['val_loss'] += flow_loss
         ret.update({
             'val_og_ps/val_kitti-epe': Kepe, 
             'val_og_ps/val_kitti-f1': f1, 
