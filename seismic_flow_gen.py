@@ -39,6 +39,7 @@ def get_args(args = None):
         parser.add_argument('--root', help="path to dataset")
         parser.add_argument('--checkpoint_file', help="path to saved checkpoint .pth file", default='./checkpoints/seismic-raft_7000.pth')
         parser.add_argument('--output_path', default=None, help="output path to save flow csv files. Optional")
+        parser.add_argument('--iters', type=int, default=24)
 
         parser.add_argument('--small', action='store_true', help='use small model')
         parser.add_argument('--equalize', action='store_true', help='equalize histogram')
@@ -61,5 +62,5 @@ if __name__ == '__main__':
     args = get_args()
 
     model = get_model(args)
-    evaluate.create_flow_submission(model.module,  args)
+    evaluate.create_flow_submission(model.module,  args, iters=args.iters)
 
